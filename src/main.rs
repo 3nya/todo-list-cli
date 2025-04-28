@@ -1,26 +1,22 @@
-use clap::Parser;
-pub mod runner;
+use std::collections::HashMap;
 
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Args {
-    // make a to-do list
-    #[arg(short, long)]
-    makelist: String,
+struct Todo {
+    map: HashMap<String, bool>,
 
 
 }
+impl Todo {
+    fn insert(&mut self, key: String) {
+        self.map.insert(key, true);
+    }
+}
 
 fn main() {
-    let args = Args::parse();
+    let action = std::env::args().nth(1).expect("Please specify an action");
+    let item = std::env::args().nth(2).expect("Please specify an item");
+    
+    println!("{:?}, {:?}", action, item);
+    
 
-    // read command line argument
-    println!("Creating a to-do list named: {}", args.makelist);
-
-    // start runner
-    let mut list = runner::ListRunner::new(Some(args.makelist));
-    // start
-    // list.run()?;
-    // Ok(())
 
 }
