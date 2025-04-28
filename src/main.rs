@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+use std::io::Read;
+use std::str::FromStr;
+use colored::Colorize;
 
 struct Todo {
     map: HashMap<String, bool>,
@@ -6,8 +9,32 @@ struct Todo {
 
 }
 impl Todo {
-    fn insert(&mut self, key: String) {
-        self.map.insert(key, true);
+    // make new list instead of overwriting with previous
+    fn new() -> Result<Todo, std::io::Error> {
+        let mut f = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .read(true)
+            .open("db.txt")?;
+        let mut content = String::new();
+        f.read_to_string(&mut content)?;
+
+        let mut map = HashMap::new();
+
+        for line in content.lines() {
+            let mut values = line.split('\t');
+            let key = values.next().expect("No Key");
+            let val = values.next().expect("No Value");
+            // insert them into HashMap
+            map.insert(String::from(key), bool::from_str(val).unwrap());
+        }
+        // let map: HashMap<String, bool> = content
+        //     .lines()
+        //     .map(|line| line.splitn(2, '\t').collect::<Vec<&str>>())
+        //     .map(|v| (v[0], v[1]))
+        //     .map(|(k, v)| (String::from(k), bool::from_str(v).unwrap()))
+        //     .collect();
+        Ok(Todo { map })
     }
     
     // save to disk method
@@ -19,15 +46,45 @@ impl Todo {
         }
         std::fs::write("db.txt", content)
     }
+
+    // functions 
+
+    // insert item
+    fn insert(&mut self, key: String) {
+        self.map.insert(key, false);
+    }
+
+    // remove item
+    fn remove(&mut self, key: String) {
+        self.map.remove(&key);
+    }
+
+    fn check(&mut self, key: String) {
+        if self.map.get(&key).unwrap().clone() == true {
+            self.map.insert(key.clone(), false);
+        } else {
+            self.map.insert(key.clone(), true);
+        }
+    }
 }
 
 fn main() {
     let action = std::env::args().nth(1).expect("Please specify an action");
+    
+    if action == "help" {
+        println!("\n");
+        println!("{}", "To-Do List Commands: \n".green().italic().bold());
+
+        println!("     {}           {}", "help".cyan(), "prints all commands");
+        println!("     {}     {}", "add <item>".cyan(), "add item to list");
+        println!("     {}  {}", "remove <item>".cyan(), "removes item (if exists) from list");
+        println!("     {}   {} \n", "check <item>".cyan(), "checks item (if exists) on list");
+
+        return;
+    }
     let item = std::env::args().nth(2).expect("Please specify an item");
     
-    let mut todo = Todo {
-        map: HashMap::new(),
-    };
+    let mut todo = Todo::new().expect("");
     
     if action == "add" {
         todo.insert(item);
@@ -35,6 +92,23 @@ fn main() {
             Ok(_) => println!("saved todo"),
             Err(_why) => println!("error"),
         }
+        return;
+    } 
+    if action == "remove" {
+        todo.remove(item);
+        match todo.save() {
+            Ok(_) => println!("saved todo"),
+            Err(_why) => println!("error"),
+        }
+        return;
+    }
+    if action == "check" {
+        todo.check(item);
+        match todo.save() {
+            Ok(_) => println!("saved todo"),
+            Err(_why) => println!("error"),
+        }
+        return;
     }
     
 
