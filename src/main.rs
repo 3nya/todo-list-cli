@@ -39,12 +39,25 @@ impl Todo {
     
     // save to disk method
     fn save(self) -> Result<(), std::io::Error> {
-        let mut content = String::new();
+        let mut content: String = String::new();
+        let mut tododisplay: String = String::new();
         for (k, v) in self.map {
-            let record = format!("{}\t{}\n", k , v);
+            // db
+            let record: String = format!("{}\t{}\n", k , v);
             content.push_str(&record);
+
+            // todo display
+            let record_dis: String;
+            if v == true {
+                record_dis = format!("☑\t{}\n", k);
+            } else {
+                record_dis = format!("◻\t{}\n", k);
+            }
+            tododisplay.push_str(&record_dis);
         }
-        std::fs::write("db.txt", content)
+        let _ = std::fs::write("db.txt", content);
+        std::fs::write("todo.txt", tododisplay)
+
     }
 
     // functions 
