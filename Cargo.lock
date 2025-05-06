@@ -140,6 +140,7 @@ dependencies = [
  "colored",
  "dialoguer",
  "rustc-serialize",
+ "serde",
  "serde_json",
 ]
 

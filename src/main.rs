@@ -4,7 +4,9 @@ use std::str::FromStr;
 use colored::Colorize;
 use std::fs::File;
 use rustc_serialize::json::Json;
+use serde::{Serialize, Deserialize};
 
+#[derive(Serialize, Deserialize, Debug)]
 struct Todo {
     map: HashMap<String, bool>,
 
@@ -20,34 +22,13 @@ impl Todo {
             .open("db.json")?;
 
         match serde_json::from_reader(f) {
-            Ok(map) => Ok(Todo { map }),
+            Ok(todo) => Ok(todo),
             Err(e) if e.is_eof() => Ok(Todo {
                 map: HashMap::new(),
             }),
             Err(e) => panic!("An error occurred: {}", e),
         }
-        // old code, db.txt read by line
-        // let mut content = String::new();
-        // f.read_to_string(&mut content)?;
 
-        // let mut map = HashMap::new();
-
-        // for line in content.lines() {
-        //     let mut values = line.split('\t');
-        //     let key = values.next().expect("No Key");
-        //     let val = values.next().expect("No Value");
-        //     // insert them into HashMap
-        //     map.insert(String::from(key), bool::from_str(val).unwrap());
-        // }
-        // Ok(Todo { map })
-
-        // old code, db read by hashmap
-        // let map: HashMap<String, bool> = content
-        //     .lines()
-        //     .map(|line| line.splitn(2, '\t').collect::<Vec<&str>>())
-        //     .map(|v| (v[0], v[1]))
-        //     .map(|(k, v)| (String::from(k), bool::from_str(v).unwrap()))
-        //     .collect();
     }
     
     // save to disk method
@@ -59,7 +40,7 @@ impl Todo {
             .truncate(true)
             .open("db.json")?;
         // write to file with serde
-        serde_json::to_writer_pretty(f, &self.map)?;
+        serde_json::to_writer_pretty(f, &self)?;
 
         let _ = self.display();
         Ok(())
@@ -68,13 +49,13 @@ impl Todo {
     // writing todo.txt method
     fn display(self) -> Result<(), std::io::Error> {
         let mut file: File = File::open("db.json").expect("failed to open json");
-        let mut data: String = String::new();
+        // let mut data: String = String::new();
+        let serialized: Todo = serde_json::from_reader(file)?;
+        // file.read_to_string(&mut data).expect("failed to read db");
         let mut tododisplay: String = String::new();
-        file.read_to_string(&mut data).expect("failed to read db");
 
-        let map: HashMap<String, bool> = serde_json::from_str(&data).expect("Failed to parse JSON");
 
-        for (k, v) in map {
+        for (k, v) in serialized.map {
             // todo display
             let record_dis: String;
             if v == true {
