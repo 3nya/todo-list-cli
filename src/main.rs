@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use colored::Colorize;
 use serde::{Serialize, Deserialize};
 use std::fs;
+use std::fs::read_to_string;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Todo {
@@ -34,7 +35,7 @@ impl Todo {
     }
 
     fn display(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let mut tododisplay = String::new();
+        let mut tododisplay: String = String::new();
 
         if self.display_count == 1 {
             tododisplay.push_str(&format!("{} {}/{}\n", 
@@ -67,6 +68,14 @@ impl Todo {
 
         fs::write("todo.txt", tododisplay)?;
         Ok(())
+    }
+
+    fn print(&self) {
+        // let mut result: String = String::new();
+        for line in read_to_string("todo.txt").unwrap().lines() {
+            println!("{}", line);
+            // result.push_str(line)
+        }
     }
 
     fn insert(&mut self, key: String) {
@@ -124,6 +133,7 @@ fn main() {
             if let Err(e) = todo.display() {
                 println!("Display error: {}", e);
             }
+            todo.print();
             continue;
         }
         
@@ -144,6 +154,8 @@ fn main() {
                     todo.display_count = 1;
                 } else if item == "f" {
                     todo.display_count = 2;
+                } else if item == "r" {
+                    todo.display_count = 0;
                 }
             },
             _ => {
@@ -166,6 +178,6 @@ fn print_help() {
     println!("     {}   {} ", "check <item>".cyan(), "checks item (if exists) on list");
     println!("     {}  {}", "header <item>".cyan(), "adds text as header");
     println!("     {}  {}", "footer <item>".cyan(), "adds text as footer");
-    println!("     {}      {}", "display".cyan(), "show current todo list");
-    println!("     {}        {}\n", "quit".cyan(), "exit the program");
+    println!("     {}        {}", "display".cyan(), "show current todo list");
+    println!("     {}           {}\n", "quit".cyan(), "exit the program");
 }
