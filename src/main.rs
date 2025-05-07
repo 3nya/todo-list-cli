@@ -9,7 +9,7 @@ use serde::{Serialize, Deserialize};
 #[derive(Serialize, Deserialize, Debug)]
 struct Todo {
     map: HashMap<String, bool>,
-
+    name: String, 
 
 }
 impl Todo {
@@ -25,6 +25,7 @@ impl Todo {
             Ok(todo) => Ok(todo),
             Err(e) if e.is_eof() => Ok(Todo {
                 map: HashMap::new(),
+                name: String::new(),
             }),
             Err(e) => panic!("An error occurred: {}", e),
         }
@@ -54,7 +55,7 @@ impl Todo {
         // file.read_to_string(&mut data).expect("failed to read db");
         let mut tododisplay: String = String::new();
 
-
+        tododisplay.push_str(&(serialized.name + "\n"));
         for (k, v) in serialized.map {
             // todo display
             let record_dis: String;
@@ -99,7 +100,8 @@ fn main() {
         println!("     {}           {}", "help".cyan(), "prints all commands");
         println!("     {}     {}", "add <item>".cyan(), "add item to list");
         println!("     {}  {}", "remove <item>".cyan(), "removes item (if exists) from list");
-        println!("     {}   {} \n", "check <item>".cyan(), "checks item (if exists) on list");
+        println!("     {}   {} ", "check <item>".cyan(), "checks item (if exists) on list");
+        println!("     {}    {}\n", "name <item>".cyan(), "adds name to list");
 
         return;
     }
@@ -129,6 +131,14 @@ fn main() {
     }
     if action == "check" {
         todo.check(item);
+        match todo.save() {
+            Ok(_) => println!("saved todo"),
+            Err(_why) => println!("error"),
+        }
+        return;
+    }
+    if action == "name" {
+        todo.name = item;
         match todo.save() {
             Ok(_) => println!("saved todo"),
             Err(_why) => println!("error"),
