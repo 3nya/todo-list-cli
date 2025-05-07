@@ -127,7 +127,9 @@ fn main() {
         println!("     {}  {}", "remove <item>".cyan(), "removes item (if exists) from list");
         println!("     {}   {} ", "check <item>".cyan(), "checks item (if exists) on list");
         println!("     {}  {}", "header <item>".cyan(), "adds text as header");
-        println!("     {}  {}\n", "footer <item>".cyan(), "adds text as footer");
+        println!("     {}  {}", "footer <item>".cyan(), "adds text as footer");
+        println!("     {}        {}", "count h".cyan(), "adds count of completed items as header");
+        println!("     {}        {}\n", "count f".cyan(), "adds count of completed items as footer");
 
         return;
     }
