@@ -90,12 +90,15 @@ impl Todo {
     }
 
     fn check(&mut self, key: String) {
-        let current = self.map.get(&key).copied().unwrap_or(false);
-        self.map.insert(key.clone(), !current);
-        if current {
-            self.count -= 1;
+        if let Some(current) = self.map.get_mut(&key) {
+            *current = !*current;
+            if *current {
+                self.count += 1;
+            } else {
+                self.count -= 1;
+            }
         } else {
-            self.count += 1;
+            println!("Item does not exist in list");
         }
     }
 }
