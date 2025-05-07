@@ -1,200 +1,183 @@
 use std::collections::HashMap;
-use std::io::Read;
-use std::str::FromStr;
 use colored::Colorize;
-use std::fs::File;
-use rustc_serialize::json::Json;
 use serde::{Serialize, Deserialize};
+use std::fs;
+use std::fs::read_to_string;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Todo {
     map: HashMap<String, bool>,
-    header: String, 
-    footer: String, 
-    display_count: i16, // 0 for none, 1 for header, 2 for footer
+    header: String,
+    footer: String,
+    display_count: i16,
     count: i16,
-
 }
-impl Todo {
-    // make new list instead of overwriting with previous
-    fn new() -> Result<Todo, std::io::Error> {
-        let f = std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .read(true)
-            .open("db.json")?;
 
-        match serde_json::from_reader(f) {
-            Ok(todo) => Ok(todo),
-            Err(e) if e.is_eof() => Ok(Todo {
+impl Todo {
+    fn new() -> Result<Todo, Box<dyn std::error::Error>> {
+        if let Ok(data) = fs::read_to_string("db.json") {
+            serde_json::from_str(&data).map_err(|e| e.into())
+        } else {
+            Ok(Todo {
                 map: HashMap::new(),
                 header: String::new(),
                 footer: String::new(),
                 display_count: 0,
                 count: 0,
-            }),
-            Err(e) => panic!("An error occurred: {}", e),
+            })
         }
-
     }
     
-    // save to disk method
-    fn save(self) -> Result<(), Box<dyn std::error::Error>> {
-        // open db.json
-        let f = std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open("db.json")?;
-        // write to file with serde
-        serde_json::to_writer_pretty(f, &self)?;
+    fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let data = serde_json::to_string_pretty(self)?;
+        fs::write("db.json", data)?;
+        self.display()
+    }
 
-        let _ = self.display();
+    fn display(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let mut tododisplay: String = String::new();
+
+        if self.display_count == 1 {
+            tododisplay.push_str(&format!("{} {}/{}\n", 
+                self.header, 
+                self.count, 
+                self.map.len()
+            ));
+        } else {
+            tododisplay.push_str(&format!("{}\n", self.header));
+        }
+
+        for (k, v) in &self.map {
+            let record_dis = if *v {
+                format!("☑\t{}\n", k)
+            } else {
+                format!("◻\t{}\n", k)
+            };
+            tododisplay.push_str(&record_dis);
+        }
+
+        if self.display_count == 2 {
+            tododisplay.push_str(&format!("{} {}/{}\n", 
+                self.footer, 
+                self.count, 
+                self.map.len()
+            ));
+        } else {
+            tododisplay.push_str(&format!("{}\n", self.footer));
+        }
+
+        fs::write("todo.txt", tododisplay)?;
         Ok(())
     }
 
-    // writing todo.txt method
-    fn display(self) -> Result<(), std::io::Error> {
-        let file: File = File::open("db.json").expect("failed to open json");
-        // let mut data: String = String::new();
-        let serialized: Todo = serde_json::from_reader(file)?;
-        // file.read_to_string(&mut data).expect("failed to read db");
-        let mut tododisplay: String = String::new();
-
-        let header: &String = &serialized.header;
-        if serialized.display_count == 1 {
-            tododisplay.push_str(&(header.to_owned() + " " + &serialized.count.to_string() + "/" + 
-            &serialized.map.len().to_string() + "\n"));
-        } else {
-            tododisplay.push_str(&(header.to_owned() + "\n"));
+    fn print(&self) {
+        // let mut result: String = String::new();
+        for line in read_to_string("todo.txt").unwrap().lines() {
+            println!("{}", line);
+            // result.push_str(line)
         }
-        for (k, v) in &serialized.map {
-            // todo display
-            let record_dis: String;
-            if *v == true {
-                record_dis = format!("☑\t{}\n", k);
-            } else {
-                record_dis = format!("◻\t{}\n", k);
-            }
-            tododisplay.push_str(&record_dis);
-        }
-        let footer: &String = &serialized.footer;
-        if serialized.display_count == 2 {
-            tododisplay.push_str(&(footer.to_owned() + " " + &serialized.count.to_string() + "/" + 
-            &serialized.map.len().to_string() + "\n"));
-        } else {
-            tododisplay.push_str(&(footer.to_owned() + "\n"));
-        }
-        std::fs::write("todo.txt", tododisplay)
     }
 
-    // functions 
-
-    // insert item
     fn insert(&mut self, key: String) {
         self.map.insert(key, false);
     }
 
-    // remove item
     fn remove(&mut self, key: String) {
-        if self.map.get(&key).unwrap().clone() == true {
-            self.count-=1;
+        if let Some(true) = self.map.get(&key) {
+            self.count -= 1;
         }
         self.map.remove(&key);
-
     }
 
     fn check(&mut self, key: String) {
-        if self.map.get(&key).unwrap().clone() == true {
-            self.map.insert(key.clone(), false);
-            self.count-=1;
+        let current = self.map.get(&key).copied().unwrap_or(false);
+        self.map.insert(key.clone(), !current);
+        if current {
+            self.count -= 1;
         } else {
-            self.map.insert(key.clone(), true);
-            self.count+=1;
+            self.count += 1;
         }
     }
 }
 
 fn main() {
-    let action = std::env::args().nth(1).expect("Please specify an action");
-    
-    if action == "help" {
-        println!("\n");
-        println!("{}", "To-Do List Commands: \n".green().italic().bold());
+    let mut todo = match Todo::new() {
+        Ok(t) => t,
+        Err(e) => {
+            println!("Failed to initialize todo list: {}", e);
+            return;
+        }
+    };
 
-        println!("     {}           {}", "help".cyan(), "prints all commands");
-        println!("     {}     {}", "add <item>".cyan(), "add item to list");
-        println!("     {}  {}", "remove <item>".cyan(), "removes item (if exists) from list");
-        println!("     {}   {} ", "check <item>".cyan(), "checks item (if exists) on list");
-        println!("     {}  {}", "header <item>".cyan(), "adds text as header");
-        println!("     {}  {}", "footer <item>".cyan(), "adds text as footer");
-        println!("     {}        {}", "count h".cyan(), "adds count of completed items as header");
-        println!("     {}        {}\n", "count f".cyan(), "adds count of completed items as footer");
+    loop {
+        println!("\nEnter command (help for commands):");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).expect("Failed to read input");
+        
+        let mut args = input.trim().split_whitespace();
+        let action = match args.next() {
+            Some(a) => a,
+            None => continue,
+        };
+        
+        if action == "quit" {
+            break;
+        }
+        
+        if action == "help" {
+            print_help();
+            continue;
+        }
 
-        return;
+        if action == "display" {
+            if let Err(e) = todo.display() {
+                println!("Display error: {}", e);
+            }
+            todo.print();
+            continue;
+        }
+        
+        let item = args.collect::<Vec<_>>().join(" ");
+        if item.is_empty() {
+            println!("Specify item for this command");
+            continue;
+        }
+        
+        match action {
+            "add" => todo.insert(item),
+            "remove" => todo.remove(item),
+            "check" => todo.check(item),
+            "header" => todo.header = item,
+            "footer" => todo.footer = item,
+            "count" => {
+                if item == "h" {
+                    todo.display_count = 1;
+                } else if item == "f" {
+                    todo.display_count = 2;
+                } else if item == "r" {
+                    todo.display_count = 0;
+                }
+            },
+            _ => {
+                println!("Unknown Command: Type help for list of commands.");
+                continue;
+            },
+        }
+        
+        if let Err(e) = todo.save() {
+            println!("Error saving: {}", e);
+        }
     }
-    let item = std::env::args().nth(2).expect("Please specify an item");
-    
-    let mut todo = Todo::new().expect("");
-    
-    // yandere dev ahh code
-    if action == "add" {
-        todo.insert(item);
-        match todo.save() {
-            Ok(_) => println!("saved todo"),
-            Err(_why) => println!("error"),
-        }
-        // match todo.display() {
-        //     Ok(_) => println!("saved display"),
-        //     Err(_why) => println!("error"),
-        // }
-        return;
-    } 
-    if action == "remove" {
-        todo.remove(item);
-        match todo.save() {
-            Ok(_) => println!("saved todo"),
-            Err(_why) => println!("error"),
-        }
-        return;
-    }
-    if action == "check" {
-        todo.check(item);
-        match todo.save() {
-            Ok(_) => println!("saved todo"),
-            Err(_why) => println!("error"),
-        }
-        return;
-    }
-    if action == "header" {
-        todo.header = item;
-        match todo.save() {
-            Ok(_) => println!("saved todo"),
-            Err(_why) => println!("error"),
-        }
-        return;
-    }
-    if action == "footer" {
-        todo.footer = item;
-        match todo.save() {
-            Ok(_) => println!("saved todo"),
-            Err(_why) => println!("error"),
-        }
-        return;
-    }
-    if action == "count" {
-        if item == "h" {
-            todo.display_count = 1;
-        } else if item == "f" {
-            todo.display_count = 2;
-        }
-        match todo.save() {
-            Ok(_) => println!("saved todo"),
-            Err(_why) => println!("error"),
-        }
-        return;
-    }
-    
+}
 
-
+fn print_help() {
+    println!("\n{}", "To-Do List Commands: \n".green().italic().bold());
+    println!("     {}           {}", "help".cyan(), "prints all commands");
+    println!("     {}     {}", "add <item>".cyan(), "add item to list");
+    println!("     {}  {}", "remove <item>".cyan(), "removes item (if exists) from list");
+    println!("     {}   {} ", "check <item>".cyan(), "checks item (if exists) on list");
+    println!("     {}  {}", "header <item>".cyan(), "adds text as header");
+    println!("     {}  {}", "footer <item>".cyan(), "adds text as footer");
+    println!("     {}        {}", "display".cyan(), "show current todo list");
+    println!("     {}           {}\n", "quit".cyan(), "exit the program");
 }
