@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use colored::Colorize;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::fs::read_to_string;
 
@@ -27,7 +27,7 @@ impl Todo {
             })
         }
     }
-    
+
     fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let data = serde_json::to_string_pretty(self)?;
         fs::write("db.json", data)?;
@@ -38,9 +38,10 @@ impl Todo {
         let mut tododisplay: String = String::new();
 
         if self.display_count == 1 {
-            tododisplay.push_str(&format!("{} {}/{}\n", 
-                self.header, 
-                self.count, 
+            tododisplay.push_str(&format!(
+                "{} {}/{}\n",
+                self.header,
+                self.count,
                 self.map.len()
             ));
         } else {
@@ -57,9 +58,10 @@ impl Todo {
         }
 
         if self.display_count == 2 {
-            tododisplay.push_str(&format!("{} {}/{}\n", 
-                self.footer, 
-                self.count, 
+            tododisplay.push_str(&format!(
+                "{} {}/{}\n",
+                self.footer,
+                self.count,
                 self.map.len()
             ));
         } else {
@@ -115,18 +117,20 @@ fn main() {
     loop {
         println!("\nEnter command (help for commands):");
         let mut input = String::new();
-        std::io::stdin().read_line(&mut input).expect("Failed to read input");
-        
+        std::io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read input");
+
         let mut args = input.trim().split_whitespace();
         let action = match args.next() {
             Some(a) => a,
             None => continue,
         };
-        
+
         if action == "quit" {
             break;
         }
-        
+
         if action == "help" {
             print_help();
             continue;
@@ -139,13 +143,13 @@ fn main() {
             todo.print();
             continue;
         }
-        
+
         let item = args.collect::<Vec<_>>().join(" ");
         if item.is_empty() {
             println!("Specify item for this command");
             continue;
         }
-        
+
         match action {
             "add" => todo.insert(item),
             "remove" => todo.remove(item),
@@ -160,13 +164,13 @@ fn main() {
                 } else if item == "r" {
                     todo.display_count = 0;
                 }
-            },
+            }
             _ => {
                 println!("Unknown Command: Type help for list of commands.");
                 continue;
-            },
+            }
         }
-        
+
         if let Err(e) = todo.save() {
             println!("Error saving: {}", e);
         }
@@ -177,10 +181,23 @@ fn print_help() {
     println!("\n{}", "To-Do List Commands: \n".green().italic().bold());
     println!("     {}           {}", "help".cyan(), "prints all commands");
     println!("     {}     {}", "add <item>".cyan(), "add item to list");
-    println!("     {}  {}", "remove <item>".cyan(), "removes item (if exists) from list");
-    println!("     {}   {} ", "check <item>".cyan(), "checks item (if exists) on list");
+    println!(
+        "     {}  {}",
+        "remove <item>".cyan(),
+        "removes item (if exists) from list"
+    );
+    println!(
+        "     {}   {} ",
+        "check <item>".cyan(),
+        "checks item (if exists) on list"
+    );
     println!("     {}  {}", "header <item>".cyan(), "adds text as header");
     println!("     {}  {}", "footer <item>".cyan(), "adds text as footer");
-    println!("     {}        {}", "display".cyan(), "show current todo list");
+    println!(
+        "     {}        {}",
+        "display".cyan(),
+        "show current todo list"
+    );
     println!("     {}           {}\n", "quit".cyan(), "exit the program");
 }
+
